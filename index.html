@@ -937,7 +937,27 @@
         document.getElementById('settings-view').classList.add('hidden');
         document.getElementById('quiz-view').classList.add('active');
 
+        // Start periodic auto-save
+        this.startAutoSave();
         this.renderQuestion();
+      },
+
+      startAutoSave() {
+        // Clear any existing auto-save interval
+        if (this.autoSaveInterval) {
+          clearInterval(this.autoSaveInterval);
+        }
+        // Auto-save every 5 seconds while quiz is active
+        this.autoSaveInterval = setInterval(() => {
+          this.autoSaveState();
+        }, 5000);
+      },
+
+      stopAutoSave() {
+        if (this.autoSaveInterval) {
+          clearInterval(this.autoSaveInterval);
+          this.autoSaveInterval = null;
+        }
       },
 
       renderQuestion() {
@@ -1041,7 +1061,15 @@
           this.currentState.answers[questionId] = checked ? checked.value : null;
         }
 
+        // Auto-save whenever an answer changes
+        this.autoSaveState();
         this.renderQuestion();
+      },
+
+      autoSaveState() {
+        if (this.currentQuiz && this.currentState) {
+          Storage.saveState(this.currentQuiz.id, this.currentState);
+        }
       },
 
       submitAnswer() {
@@ -1096,6 +1124,8 @@
       },
 
       showResults() {
+        // Stop auto-save when showing results
+        this.stopAutoSave();
         Storage.clearSavedState();
 
         const { questions, scores, answers } = this.currentState;
@@ -1179,6 +1209,9 @@
           }
         }
 
+        // Stop auto-save
+        this.stopAutoSave();
+
         this.currentQuiz = null;
         this.currentState = null;
         document.getElementById('quiz-view').classList.remove('active');
@@ -1195,6 +1228,21 @@
         this.renderHome();
         this.setupNavigation();
         this.setupFileWatcher();
+        this.setupBeforeUnload();
+      },
+
+      setupBeforeUnload() {
+        // Save state when user navigates away or closes tab
+        window.addEventListener('beforeunload', () => {
+          QuizManager.autoSaveState();
+        });
+
+        // Also save when page visibility changes (switching tabs, minimizing)
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            QuizManager.autoSaveState();
+          }
+        });
       },
 
       applyTheme() {
@@ -1234,6 +1282,12 @@
       },
 
       showView(view) {
+        // Save quiz state before switching views
+        if (document.getElementById('quiz-view').classList.contains('active')) {
+          QuizManager.autoSaveState();
+          QuizManager.stopAutoSave();
+        }
+
         document.querySelectorAll('.nav-link').forEach(link => {
           link.classList.toggle('active', link.dataset.view === view);
         });
