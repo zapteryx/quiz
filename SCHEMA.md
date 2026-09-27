@@ -12,6 +12,7 @@ Each quiz is stored as a JSON file in the `data/` directory. The filename (witho
     "showFeedback": "immediate | end",
     "randomizeQuestions": boolean,
     "questionBankSize": number | null,
+    "promptForQuestionCount": boolean (optional, default false),
     "passingScore": number (0-100, optional)
   },
   "questions": [
@@ -52,6 +53,7 @@ Each quiz is stored as a JSON file in the `data/` directory. The filename (witho
   - `"end"`: Show all feedback after quiz completion
 - **randomizeQuestions**: If true, questions appear in random order each attempt
 - **questionBankSize**: If set, only this many questions are shown per attempt (randomly selected from all questions). If null or omitted, all questions are shown
+- **promptForQuestionCount**: If true, prompts the user to choose how many questions they want in their attempt (up to the maximum number of questions in the bank). The prompt defaults to `questionBankSize` if set, otherwise the total number of questions. If false or omitted, uses `questionBankSize` directly. Default: false
 - **passingScore**: Optional percentage (0-100) needed to pass
 
 ### Questions
@@ -95,6 +97,7 @@ Examples for a 1-point question with 3 correct answers:
     "showFeedback": "immediate",
     "randomizeQuestions": true,
     "questionBankSize": 5,
+    "promptForQuestionCount": true,
     "passingScore": 70
   },
   "questions": [
