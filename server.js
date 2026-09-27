@@ -44,7 +44,8 @@ app.get('/data/:filename', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Quiz server running at http://localhost:${PORT}`);
+  console.log(`Also accessible via your local IP address on port ${PORT}`);
   console.log(`Add quiz JSON files to the 'data' directory`);
 });
