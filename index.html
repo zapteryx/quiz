@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ink: #1E3A8A;
+      --ink-light: #3B82F6;
+      --amber: #D97706;
+      --amber-light: #F59E0B;
+      --surface: #F8F9FA;
+      --text: #1F2937;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --correct: #059669;
+      --incorrect: #DC2626;
+      --white: #FFFFFF;
+      --progress-bg: #E0E7FF;
+    }
+
+    [data-theme="dark"] {
+      --ink: #60A5FA;
+      --ink-light: #93C5FD;
+      --amber: #FBB034;
+      --amber-light: #FCD34D;
+      --surface: #1F2937;
+      --text: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --border: #374151;
+      --correct: #10B981;
+      --incorrect: #EF4444;
+      --white: #111827;
+      --progress-bg: #1E3A8A;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--white);
+      transition: background 0.2s, color 0.2s;
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    .header {
+      margin-bottom: 48px;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 24px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.025em;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 8px;
+      line-height: 1;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 15px;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--ink);
+    }
+
+    .quiz-list {
+      list-style: none;
+    }
+
+    .quiz-item {
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+    }
+
+    .quiz-item:last-child {
+      border-bottom: none;
+    }
+
+    .quiz-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .quiz-meta {
+      display: flex;
+      gap: 16px;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .quiz-description {
+      color: var(--text);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: var(--amber);
+      color: var(--white);
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 2px;
+      margin-left: 8px;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 10px 24px;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+
+    .button:hover:not(:disabled) {
+      background: var(--ink-light);
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .button-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .button-secondary:hover {
+      background: var(--border);
+    }
+
+    .button-danger {
+      background: var(--incorrect);
+    }
+
+    .button-danger:hover {
+      background: #B91C1C;
+    }
+
+    .quiz-interface {
+      display: none;
+    }
+
+    .quiz-interface.active {
+      display: block;
+    }
+
+    .progress-container {
+      background: var(--progress-bg);
+      padding: 16px;
+      margin-bottom: 32px;
+      border: 2px solid var(--ink);
+    }
+
+    .progress-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--border);
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--ink);
+      transition: width 0.3s;
+    }
+
+    .question-counter {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .question-text {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .question-score {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .options {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .option {
+      border: 2px solid var(--border);
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--white);
+    }
+
+    .option:hover {
+      border-color: var(--ink-light);
+    }
+
+    .option.selected {
+      border-color: var(--ink);
+      background: var(--surface);
+    }
+
+    .option.correct {
+      border-color: var(--correct);
+      background: #ECFDF5;
+    }
+
+    [data-theme="dark"] .option.correct {
+      background: #064E3B;
+    }
+
+    .option.incorrect {
+      border-color: var(--incorrect);
+      background: #FEF2F2;
+    }
+
+    [data-theme="dark"] .option.incorrect {
+      background: #7F1D1D;
+    }
+
+    .option.disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .option input[type="checkbox"],
+    .option input[type="radio"] {
+      margin-right: 12px;
+    }
+
+    .feedback {
+      background: var(--surface);
+      border-left: 4px solid var(--ink);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .feedback.correct {
+      border-left-color: var(--correct);
+    }
+
+    .feedback.incorrect {
+      border-left-color: var(--incorrect);
+    }
+
+    .feedback-label {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .results {
+      text-align: center;
+      padding: 48px 0;
+    }
+
+    .results-score {
+      font-size: 64px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .results-message {
+      font-size: 24px;
+      margin-bottom: 32px;
+      color: var(--text);
+    }
+
+    .results-details {
+      background: var(--surface);
+      padding: 24px;
+      margin: 32px 0;
+      text-align: left;
+    }
+
+    .results-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-section {
+      margin-bottom: 32px;
+    }
+
+    .settings-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .settings-item {
+      background: var(--surface);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .settings-label {
+      font-weight: 500;
+    }
+
+    .settings-meta {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 64px 0;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .attempts-list {
+      list-style: none;
+      margin-top: 16px;
+    }
+
+    .attempt-item {
+      background: var(--white);
+      border: 1px solid var(--border);
+      padding: 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .attempt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .attempt-header:hover {
+      color: var(--ink);
+    }
+
+    .attempt-info {
+      flex: 1;
+    }
+
+    .attempt-delete {
+      padding: 4px 12px;
+      font-size: 13px;
+      margin-left: 12px;
+    }
+
+    .attempt-score {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .attempt-details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .attempt-question {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .attempt-question:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .attempt-question-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .attempt-answer {
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .attempt-answer.correct {
+      color: var(--correct);
+    }
+
+    .attempt-answer.incorrect {
+      color: var(--incorrect);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--white);
+      padding: 32px;
+      max-width: 480px;
+      width: 90%;
+      border: 2px solid var(--ink);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .modal-text {
+      color: var(--text);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 32px 16px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .question-text {
+        font-size: 18px;
+      }
+
+      .results-score {
+        font-size: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-top">
+        <h1>Quiz Platform</h1>
+        <button class="theme-toggle" onclick="UI.toggleTheme()" aria-label="Toggle dark mode">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
+      <nav class="header-nav">
+        <a class="nav-link active" data-view="home">Quizzes</a>
+        <a class="nav-link" data-view="settings">Settings</a>
+      </nav>
+    </header>
+
+    <main id="app">
+      <!-- Home View -->
+      <div id="home-view" class="view">
+        <ul id="quiz-list" class="quiz-list"></ul>
+        <div id="empty-state" class="empty-state hidden">
+          <div class="empty-state-icon">📝</div>
+          <p>No quizzes available. Add quiz JSON files to the data directory.</p>
+        </div>
+      </div>
+
+      <!-- Quiz Taking View -->
+      <div id="quiz-view" class="quiz-interface">
+        <div class="progress-container">
+          <div class="progress-label">Progress</div>
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+        <div id="quiz-content"></div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settings-view" class="view hidden">
+        <div class="settings-section">
+          <h2>Data Management</h2>
+          <p style="color: var(--text-muted); margin-bottom: 16px;">
+            All quiz attempts are stored locally in your browser. No data is sent to any server.
+          </p>
+          <button id="delete-all-data" class="button button-danger">Delete All Data</button>
+        </div>
+
+        <div class="settings-section">
+          <h2>Quiz Data</h2>
+          <div id="quiz-data-list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Storage Manager
+    const Storage = {
+      STORAGE_KEY: 'quiz_platform_data',
+      STATE_KEY: 'quiz_platform_state',
+      THEME_KEY: 'quiz_platform_theme',
+
+      getData() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { attempts: {} };
+      },
+
+      saveData(data) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+      },
+
+      saveAttempt(quizId, result, questions, answers, scores) {
+        const data = this.getData();
+        if (!data.attempts[quizId]) {
+          data.attempts[quizId] = [];
+        }
+
+        const questionDetails = questions.map(q => ({
+          question: q.question,
+          userAnswer: answers[q.id],
+          correctAnswers: q.correctAnswers,
+          score: scores[q.id],
+          maxScore: q.score,
+          options: q.options
+        }));
+
+        data.attempts[quizId].push({
+          timestamp: new Date().toISOString(),
+          score: result.score,
+          maxScore: result.maxScore,
+          percentage: result.percentage,
+          passed: result.passed,
+          questions: questionDetails
+        });
+        this.saveData(data);
+      },
+
+      getAttempts(quizId) {
+        const data = this.getData();
+        return data.attempts[quizId] || [];
+      },
+
+      deleteQuizData(quizId) {
+        const data = this.getData();
+        delete data.attempts[quizId];
+        this.saveData(data);
+      },
+
+      deleteAttempt(quizId, attemptIndex) {
+        const data = this.getData();
+        if (data.attempts[quizId] && data.attempts[quizId][attemptIndex] !== undefined) {
+          data.attempts[quizId].splice(attemptIndex, 1);
+          if (data.attempts[quizId].length === 0) {
+            delete data.attempts[quizId];
+          }
+          this.saveData(data);
+        }
+      },
+
+      deleteAllData() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        localStorage.removeItem(this.STATE_KEY);
+      },
+
+      cleanupDeletedQuizzes(activeQuizIds) {
+        const data = this.getData();
+        const storedQuizIds = Object.keys(data.attempts);
+        let changed = false;
+
+        storedQuizIds.forEach(quizId => {
+          if (!activeQuizIds.includes(quizId)) {
+            delete data.attempts[quizId];
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          this.saveData(data);
+        }
+
+        // Also cleanup saved state
+        const savedState = this.getSavedState();
+        if (savedState && !activeQuizIds.includes(savedState.quizId)) {
+          this.clearSavedState();
+        }
+      },
+
+      saveState(quizId, state) {
+        localStorage.setItem(this.STATE_KEY, JSON.stringify({ quizId, state, timestamp: Date.now() }));
+      },
+
+      getSavedState() {
+        const data = localStorage.getItem(this.STATE_KEY);
+        return data ? JSON.parse(data) : null;
+      },
+
+      clearSavedState() {
+        localStorage.removeItem(this.STATE_KEY);
+      },
+
+      getTheme() {
+        return localStorage.getItem(this.THEME_KEY) || 'light';
+      },
+
+      saveTheme(theme) {
+        localStorage.setItem(this.THEME_KEY, theme);
+      }
+    };
+
+    // Quiz Manager
+    const QuizManager = {
+      quizzes: {},
+      currentQuiz: null,
+      currentState: null,
+
+      async loadQuizzes() {
+        try {
+          const response = await fetch('/api/quizzes');
+          const quizFiles = await response.json();
+
+          const loadedQuizzes = {};
+          for (const file of quizFiles) {
+            try {
+              const quizResponse = await fetch(`/data/${file}`);
+              const quiz = await quizResponse.json();
+              const quizId = file.replace('.json', '');
+              loadedQuizzes[quizId] = quiz;
+            } catch (error) {
+              console.error(`Failed to load quiz ${file}:`, error);
+            }
+          }
+
+          this.quizzes = loadedQuizzes;
+          Storage.cleanupDeletedQuizzes(Object.keys(this.quizzes));
+          return this.quizzes;
+        } catch (error) {
+          console.error('Failed to load quizzes:', error);
+          return {};
+        }
+      },
+
+      startQuiz(quizId, forceNew = false) {
+        const quiz = this.quizzes[quizId];
+        if (!quiz) return;
+
+        // Check for saved state
+        const savedState = Storage.getSavedState();
+        if (!forceNew && savedState && savedState.quizId === quizId) {
+          this.showResumeDialog(quizId, savedState.state);
+          return;
+        }
+
+        this.initializeQuiz(quizId);
+      },
+
+      showResumeDialog(quizId, savedState) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <div class="modal-title">Resume Quiz?</div>
+            <div class="modal-text">
+              You have an incomplete attempt for this quiz. Would you like to continue where you left off, or start fresh?
+            </div>
+            <div class="button-group">
+              <button class="button" onclick="QuizManager.resumeQuiz('${quizId}')">Resume</button>
+              <button class="button button-secondary" onclick="QuizManager.initializeQuiz('${quizId}')">Start Fresh</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.remove();
+          }
+        });
+      },
+
+      resumeQuiz(quizId) {
+        document.querySelector('.modal')?.remove();
+        const savedState = Storage.getSavedState();
+        if (savedState && savedState.quizId === quizId) {
+          this.currentQuiz = { id: quizId, ...this.quizzes[quizId] };
+          this.currentState = savedState.state;
+          this.renderQuiz();
+        }
+      },
+
+      initializeQuiz(quizId) {
+        document.querySelector('.modal')?.remove();
+        Storage.clearSavedState();
+
+        const quiz = this.quizzes[quizId];
+        if (!quiz) return;
+
+        this.currentQuiz = { id: quizId, ...quiz };
+
+        let questions = [...quiz.questions];
+
+        if (quiz.settings.randomizeQuestions) {
+          questions = this.shuffle(questions);
+        }
+
+        if (quiz.settings.questionBankSize && quiz.settings.questionBankSize < questions.length) {
+          questions = questions.slice(0, quiz.settings.questionBankSize);
+        }
+
+        questions = questions.map(q => {
+          const question = { ...q };
+          if (question.randomizeOptions) {
+            question.options = this.shuffle([...question.options]);
+          }
+          return question;
+        });
+
+        this.currentState = {
+          questions,
+          currentIndex: 0,
+          answers: {},
+          scores: {},
+          showingFeedback: false
+        };
+
+        this.renderQuiz();
+      },
+
+      shuffle(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      },
+
+      renderQuiz() {
+        document.getElementById('home-view').classList.add('hidden');
+        document.getElementById('settings-view').classList.add('hidden');
+        document.getElementById('quiz-view').classList.add('active');
+
+        this.renderQuestion();
+      },
+
+      renderQuestion() {
+        const { questions, currentIndex, answers } = this.currentState;
+        const question = questions[currentIndex];
+        const progress = ((currentIndex + 1) / questions.length) * 100;
+
+        document.getElementById('progress-fill').style.width = `${progress}%`;
+
+        const isMultiple = question.type === 'multiple';
+        const userAnswer = answers[question.id];
+        const hasAnswer = userAnswer && (Array.isArray(userAnswer) ? userAnswer.length > 0 : true);
+
+        let html = `
+          <div class="question-counter">Question ${currentIndex + 1} of ${questions.length}</div>
+          <div class="question-text">${question.question}</div>
+          <div class="question-score">${question.score} ${question.score === 1 ? 'point' : 'points'}</div>
+          <ul class="options">
+            ${question.options.map(option => {
+              const isSelected = isMultiple
+                ? (userAnswer || []).includes(option.id)
+                : userAnswer === option.id;
+              const isCorrect = question.correctAnswers.includes(option.id);
+
+              let optionClass = 'option';
+              if (this.currentState.showingFeedback) {
+                optionClass += ' disabled';
+                if (isCorrect) optionClass += ' correct';
+                if (isSelected && !isCorrect) optionClass += ' incorrect';
+              } else if (isSelected) {
+                optionClass += ' selected';
+              }
+
+              return `
+                <li class="${optionClass}" data-option="${option.id}">
+                  <label style="cursor: pointer; display: block;">
+                    <input type="${isMultiple ? 'checkbox' : 'radio'}"
+                           name="question-${question.id}"
+                           value="${option.id}"
+                           ${isSelected ? 'checked' : ''}
+                           ${this.currentState.showingFeedback ? 'disabled' : ''}>
+                    ${option.text}
+                  </label>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        `;
+
+        if (this.currentState.showingFeedback && this.currentQuiz.settings.showFeedback === 'immediate') {
+          const score = this.currentState.scores[question.id];
+          const isCorrect = score === question.score;
+          html += `
+            <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
+              <div class="feedback-label">${isCorrect ? 'Correct' : 'Incorrect'}</div>
+              <div>${isCorrect ? question.feedback.correct : question.feedback.incorrect}</div>
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="button-group">
+            ${this.currentState.showingFeedback ? `
+              <button class="button" onclick="QuizManager.nextQuestion()">
+                ${currentIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
+              </button>
+            ` : `
+              <button class="button" onclick="QuizManager.submitAnswer()" ${!hasAnswer ? 'disabled' : ''}>
+                ${this.currentQuiz.settings.showFeedback === 'immediate' ? 'Submit Answer' :
+                  (currentIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz')}
+              </button>
+            `}
+            <button class="button button-secondary" onclick="QuizManager.exitQuiz()">Exit Quiz</button>
+          </div>
+        `;
+
+        document.getElementById('quiz-content').innerHTML = html;
+
+        // Add event listeners for options
+        document.querySelectorAll('.option').forEach(option => {
+          option.addEventListener('click', (e) => {
+            if (this.currentState.showingFeedback) return;
+
+            const checkbox = option.querySelector('input');
+            if (e.target !== checkbox) {
+              checkbox.checked = !checkbox.checked;
+            }
+
+            this.updateAnswer(question.id, question.type);
+          });
+        });
+      },
+
+      updateAnswer(questionId, questionType) {
+        if (questionType === 'multiple') {
+          const checked = Array.from(document.querySelectorAll(`input[name="question-${questionId}"]:checked`))
+            .map(input => input.value);
+          this.currentState.answers[questionId] = checked;
+        } else {
+          const checked = document.querySelector(`input[name="question-${questionId}"]:checked`);
+          this.currentState.answers[questionId] = checked ? checked.value : null;
+        }
+
+        this.renderQuestion();
+      },
+
+      submitAnswer() {
+        const { questions, currentIndex, answers } = this.currentState;
+        const question = questions[currentIndex];
+        const userAnswer = answers[question.id];
+
+        const score = this.calculateScore(question, userAnswer);
+        this.currentState.scores[question.id] = score;
+
+        if (this.currentQuiz.settings.showFeedback === 'immediate') {
+          this.currentState.showingFeedback = true;
+          this.renderQuestion();
+        } else {
+          this.nextQuestion();
+        }
+      },
+
+      calculateScore(question, userAnswer) {
+        if (question.type === 'single') {
+          return userAnswer === question.correctAnswers[0] ? question.score : 0;
+        } else {
+          const correctAnswers = new Set(question.correctAnswers);
+          const userAnswers = new Set(userAnswer || []);
+
+          const allOptions = new Set(question.options.map(o => o.id));
+          const incorrectAnswers = new Set([...allOptions].filter(id => !correctAnswers.has(id)));
+
+          const correctSelected = [...userAnswers].filter(id => correctAnswers.has(id)).length;
+          const incorrectSelected = [...userAnswers].filter(id => incorrectAnswers.has(id)).length;
+
+          const correctRatio = correctSelected / correctAnswers.size;
+          const incorrectRatio = incorrectAnswers.size > 0 ? incorrectSelected / incorrectAnswers.size : 0;
+
+          const score = Math.max(0, correctRatio - incorrectRatio) * question.score;
+          return score;
+        }
+      },
+
+      nextQuestion() {
+        this.currentState.showingFeedback = false;
+        this.currentState.currentIndex++;
+
+        // Save state after each question
+        Storage.saveState(this.currentQuiz.id, this.currentState);
+
+        if (this.currentState.currentIndex >= this.currentState.questions.length) {
+          this.showResults();
+        } else {
+          this.renderQuestion();
+        }
+      },
+
+      showResults() {
+        Storage.clearSavedState();
+
+        const { questions, scores, answers } = this.currentState;
+        const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
+        const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
+        const percentage = Math.round((totalScore / maxScore) * 100);
+
+        const passingScore = this.currentQuiz.settings.passingScore;
+        const passed = passingScore ? percentage >= passingScore : null;
+
+        const result = {
+          score: totalScore,
+          maxScore,
+          percentage,
+          passed
+        };
+
+        Storage.saveAttempt(this.currentQuiz.id, result, questions, answers, scores);
+
+        let html = `
+          <div class="results">
+            <div class="results-score">${percentage}%</div>
+            <div class="results-message">
+              ${passed === true ? 'You passed!' : passed === false ? 'You did not pass.' : 'Quiz complete'}
+            </div>
+            <div class="results-details">
+              <div class="results-row">
+                <span>Score</span>
+                <span><strong>${totalScore.toFixed(2)} / ${maxScore}</strong></span>
+              </div>
+              <div class="results-row">
+                <span>Questions</span>
+                <span><strong>${questions.length}</strong></span>
+              </div>
+              ${passingScore ? `
+                <div class="results-row">
+                  <span>Passing Score</span>
+                  <span><strong>${passingScore}%</strong></span>
+                </div>
+              ` : ''}
+            </div>
+        `;
+
+        if (this.currentQuiz.settings.showFeedback === 'end') {
+          html += '<div style="text-align: left; margin-top: 32px;">';
+          questions.forEach((question, index) => {
+            const score = scores[question.id];
+            const isCorrect = score === question.score;
+            const userAnswer = answers[question.id];
+
+            html += `
+              <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}" style="margin-bottom: 24px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">
+                  Question ${index + 1}: ${question.question}
+                </div>
+                <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 8px;">
+                  Score: ${score.toFixed(2)} / ${question.score}
+                </div>
+                <div>${isCorrect ? question.feedback.correct : question.feedback.incorrect}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+
+        html += `
+            <div class="button-group" style="justify-content: center; margin-top: 32px;">
+              <button class="button" onclick="QuizManager.startQuiz('${this.currentQuiz.id}', true)">Retake Quiz</button>
+              <button class="button button-secondary" onclick="QuizManager.exitQuiz()">Back to Quizzes</button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('quiz-content').innerHTML = html;
+      },
+
+      exitQuiz() {
+        if (this.currentState && this.currentState.currentIndex < this.currentState.questions.length) {
+          if (Object.keys(this.currentState.answers).length > 0) {
+            Storage.saveState(this.currentQuiz.id, this.currentState);
+          }
+        }
+
+        this.currentQuiz = null;
+        this.currentState = null;
+        document.getElementById('quiz-view').classList.remove('active');
+        document.getElementById('home-view').classList.remove('hidden');
+        UI.renderHome();
+      }
+    };
+
+    // UI Manager
+    const UI = {
+      async init() {
+        this.applyTheme();
+        await QuizManager.loadQuizzes();
+        this.renderHome();
+        this.setupNavigation();
+        this.setupFileWatcher();
+      },
+
+      applyTheme() {
+        const theme = Storage.getTheme();
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+      },
+
+      toggleTheme() {
+        const current = Storage.getTheme();
+        const newTheme = current === 'light' ? 'dark' : 'light';
+        Storage.saveTheme(newTheme);
+        this.applyTheme();
+      },
+
+      setupNavigation() {
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = link.dataset.view;
+            this.showView(view);
+          });
+        });
+
+        document.getElementById('delete-all-data').addEventListener('click', () => {
+          if (confirm('Are you sure you want to delete all quiz data? This cannot be undone.')) {
+            Storage.deleteAllData();
+            this.renderSettings();
+            alert('All data has been deleted.');
+          }
+        });
+      },
+
+      showView(view) {
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.classList.toggle('active', link.dataset.view === view);
+        });
+
+        document.getElementById('home-view').classList.toggle('hidden', view !== 'home');
+        document.getElementById('settings-view').classList.toggle('hidden', view !== 'settings');
+        document.getElementById('quiz-view').classList.remove('active');
+
+        if (view === 'home') {
+          this.renderHome();
+        } else if (view === 'settings') {
+          this.renderSettings();
+        }
+      },
+
+      renderHome() {
+        const quizList = document.getElementById('quiz-list');
+        const emptyState = document.getElementById('empty-state');
+        const quizzes = QuizManager.quizzes;
+        const quizIds = Object.keys(quizzes);
+
+        if (quizIds.length === 0) {
+          quizList.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        quizList.innerHTML = quizIds.map(quizId => {
+          const quiz = quizzes[quizId];
+          const attempts = Storage.getAttempts(quizId);
+          const lastAttempt = attempts[attempts.length - 1];
+          const savedState = Storage.getSavedState();
+          const hasInProgress = savedState && savedState.quizId === quizId;
+
+          return `
+            <li class="quiz-item">
+              <div class="quiz-title">
+                ${quiz.title}
+                ${hasInProgress ? '<span class="badge">In Progress</span>' : ''}
+              </div>
+              <div class="quiz-meta">
+                <span>${quiz.questions.length} questions</span>
+                ${quiz.settings.questionBankSize ? `<span>${quiz.settings.questionBankSize} per attempt</span>` : ''}
+                ${quiz.settings.passingScore ? `<span>${quiz.settings.passingScore}% to pass</span>` : ''}
+                ${attempts.length > 0 ? `<span>${attempts.length} ${attempts.length === 1 ? 'attempt' : 'attempts'}</span>` : ''}
+              </div>
+              ${quiz.description ? `<div class="quiz-description">${quiz.description}</div>` : ''}
+              ${lastAttempt ? `
+                <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;">
+                  Last attempt: ${lastAttempt.percentage}% on ${new Date(lastAttempt.timestamp).toLocaleDateString()}
+                </div>
+              ` : ''}
+              <button class="button" onclick="QuizManager.startQuiz('${quizId}')">
+                ${hasInProgress ? 'Continue Quiz' : 'Start Quiz'}
+              </button>
+            </li>
+          `;
+        }).join('');
+      },
+
+      renderSettings() {
+        const quizDataList = document.getElementById('quiz-data-list');
+        const quizzes = QuizManager.quizzes;
+        const quizIds = Object.keys(quizzes);
+
+        if (quizIds.length === 0) {
+          quizDataList.innerHTML = '<p style="color: var(--text-muted);">No quiz data available.</p>';
+          return;
+        }
+
+        quizDataList.innerHTML = quizIds.map(quizId => {
+          const quiz = quizzes[quizId];
+          const attempts = Storage.getAttempts(quizId);
+
+          return `
+            <div class="settings-item" style="display: block;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div>
+                  <div class="settings-label">${quiz.title}</div>
+                  <div class="settings-meta">${attempts.length} ${attempts.length === 1 ? 'attempt' : 'attempts'}</div>
+                </div>
+                ${attempts.length > 0 ? `
+                  <button class="button button-secondary" onclick="UI.deleteQuizData('${quizId}')">
+                    Delete Data
+                  </button>
+                ` : ''}
+              </div>
+              ${attempts.length > 0 ? `
+                <ul class="attempts-list">
+                  ${attempts.slice(-5).reverse().map((attempt, displayIndex) => {
+                    const actualIndex = attempts.length - 1 - displayIndex;
+                    return `
+                    <li class="attempt-item">
+                      <div class="attempt-header" onclick="UI.toggleAttemptDetails(this)">
+                        <div class="attempt-info">
+                          <span class="attempt-score">${attempt.percentage}%</span>
+                          <span style="color: var(--text-muted);">
+                            ${new Date(attempt.timestamp).toLocaleString()}
+                          </span>
+                          <span style="color: var(--text-muted); margin-left: 8px;">(click to expand)</span>
+                        </div>
+                        <button class="button button-danger attempt-delete" onclick="event.stopPropagation(); UI.deleteAttempt('${quizId}', ${actualIndex})">
+                          Delete
+                        </button>
+                      </div>
+                      <div class="attempt-details hidden">
+                        ${attempt.questions ? attempt.questions.map((q, idx) => {
+                          const userAnswerIds = Array.isArray(q.userAnswer) ? q.userAnswer : [q.userAnswer];
+                          const userAnswerText = userAnswerIds
+                            .map(id => q.options.find(o => o.id === id)?.text || 'No answer')
+                            .join(', ');
+                          const correctAnswerText = q.correctAnswers
+                            .map(id => q.options.find(o => o.id === id)?.text)
+                            .join(', ');
+                          const isCorrect = q.score === q.maxScore;
+
+                          return `
+                            <div class="attempt-question">
+                              <div class="attempt-question-title">Q${idx + 1}: ${q.question}</div>
+                              <div class="attempt-answer ${isCorrect ? 'correct' : 'incorrect'}">
+                                Your answer: ${userAnswerText}
+                              </div>
+                              <div class="attempt-answer correct">
+                                Correct answer: ${correctAnswerText}
+                              </div>
+                              <div style="color: var(--text-muted);">
+                                Score: ${q.score.toFixed(2)} / ${q.maxScore}
+                              </div>
+                            </div>
+                          `;
+                        }).join('') : '<p style="color: var(--text-muted);">No detailed data available for this attempt.</p>'}
+                      </div>
+                    </li>
+                  `;
+                  }).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      },
+
+      toggleAttemptDetails(headerElement) {
+        const attemptItem = headerElement.closest('.attempt-item');
+        const details = attemptItem.querySelector('.attempt-details');
+
+        // Collapse all other attempts
+        document.querySelectorAll('.attempt-details').forEach(otherDetails => {
+          if (otherDetails !== details) {
+            otherDetails.classList.add('hidden');
+          }
+        });
+
+        // Toggle this attempt
+        if (details) {
+          details.classList.toggle('hidden');
+        }
+      },
+
+      deleteAttempt(quizId, attemptIndex) {
+        if (confirm('Delete this attempt? This cannot be undone.')) {
+          Storage.deleteAttempt(quizId, attemptIndex);
+          this.renderSettings();
+        }
+      },
+
+      deleteQuizData(quizId) {
+        if (confirm('Delete all attempt data for this quiz?')) {
+          Storage.deleteQuizData(quizId);
+          this.renderSettings();
+        }
+      },
+
+      setupFileWatcher() {
+        setInterval(async () => {
+          const oldQuizIds = Object.keys(QuizManager.quizzes).sort();
+          await QuizManager.loadQuizzes();
+          const newQuizIds = Object.keys(QuizManager.quizzes).sort();
+
+          if (JSON.stringify(oldQuizIds) !== JSON.stringify(newQuizIds)) {
+            console.log('Quiz files changed, refreshing...');
+            if (document.getElementById('home-view').classList.contains('hidden') === false) {
+              this.renderHome();
+            }
+          }
+        }, 5000);
+      }
+    };
+
+    // Initialize app
+    UI.init();
+  </script>
+</body>
+</html>
