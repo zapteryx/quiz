@@ -1,10 +1,14 @@
 const express = require('express');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 const app = express();
 const PORT = 3000;
 const DATA_DIR = path.join(__dirname, 'data');
+
+// Track SSE clients
+const clients = new Set();
 
 // Serve static files
 app.use(express.static(__dirname));
@@ -23,6 +27,61 @@ app.get('/api/quizzes', async (req, res) => {
     }
   }
 });
+
+// Server-Sent Events endpoint for real-time updates
+app.get('/api/events', (req, res) => {
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Add client to set
+  clients.add(res);
+  console.log(`SSE client connected (${clients.size} total)`);
+
+  // Send initial connection event
+  res.write('data: {"type":"connected"}\n\n');
+
+  // Remove client on disconnect
+  req.on('close', () => {
+    clients.delete(res);
+    console.log(`SSE client disconnected (${clients.size} remaining)`);
+  });
+});
+
+// Notify all connected clients of changes
+function notifyClients() {
+  const message = `data: ${JSON.stringify({ type: 'change' })}\n\n`;
+  clients.forEach(client => {
+    try {
+      client.write(message);
+    } catch (error) {
+      // Client connection may be broken
+      clients.delete(client);
+    }
+  });
+}
+
+// Watch data directory for changes
+async function watchDataDirectory() {
+  try {
+    // Ensure data directory exists
+    await fs.mkdir(DATA_DIR, { recursive: true });
+
+    // Watch for changes
+    fsSync.watch(DATA_DIR, (eventType, filename) => {
+      if (filename && filename.endsWith('.json')) {
+        console.log(`Data directory changed: ${eventType} ${filename}`);
+        notifyClients();
+      }
+    });
+
+    console.log('Watching data directory for changes...');
+  } catch (error) {
+    console.error('Failed to watch data directory:', error);
+  }
+}
 
 // Serve quiz JSON files
 app.get('/data/:filename', async (req, res) => {
@@ -48,4 +107,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Quiz server running at http://localhost:${PORT}`);
   console.log(`Also accessible via your local IP address on port ${PORT}`);
   console.log(`Add quiz JSON files to the 'data' directory`);
+  watchDataDirectory();
 });

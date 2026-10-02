@@ -1558,18 +1558,66 @@
       },
 
       setupFileWatcher() {
-        setInterval(async () => {
-          const oldQuizIds = Object.keys(QuizManager.quizzes).sort();
-          await QuizManager.loadQuizzes();
-          const newQuizIds = Object.keys(QuizManager.quizzes).sort();
+        let eventSource;
+        let reconnectTimeout;
 
-          if (JSON.stringify(oldQuizIds) !== JSON.stringify(newQuizIds)) {
-            console.log('Quiz files changed, refreshing...');
-            if (document.getElementById('home-view').classList.contains('hidden') === false) {
-              this.renderHome();
+        const connect = () => {
+          console.log('Connecting to server events...');
+          eventSource = new EventSource('/api/events');
+
+          eventSource.onopen = () => {
+            console.log('Connected to server events');
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+              reconnectTimeout = null;
             }
+          };
+
+          eventSource.onmessage = async (event) => {
+            try {
+              const data = JSON.parse(event.data);
+
+              if (data.type === 'connected') {
+                console.log('Server connection established');
+              } else if (data.type === 'change') {
+                console.log('Quiz files changed, refreshing...');
+                const oldQuizIds = Object.keys(QuizManager.quizzes).sort();
+                await QuizManager.loadQuizzes();
+                const newQuizIds = Object.keys(QuizManager.quizzes).sort();
+
+                if (JSON.stringify(oldQuizIds) !== JSON.stringify(newQuizIds)) {
+                  if (!document.getElementById('home-view').classList.contains('hidden')) {
+                    this.renderHome();
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error handling server event:', error);
+            }
+          };
+
+          eventSource.onerror = (error) => {
+            console.error('EventSource error:', error);
+            eventSource.close();
+
+            // Reconnect after 3 seconds
+            if (!reconnectTimeout) {
+              reconnectTimeout = setTimeout(() => {
+                console.log('Reconnecting to server events...');
+                connect();
+              }, 3000);
+            }
+          };
+        };
+
+        connect();
+
+        // Close connection when page unloads
+        window.addEventListener('beforeunload', () => {
+          if (eventSource) {
+            eventSource.close();
           }
-        }, 5000);
+        });
       }
     };
 

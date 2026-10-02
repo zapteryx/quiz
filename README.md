@@ -135,10 +135,13 @@ When a quiz file is removed, its attempt data is automatically cleaned up.
 
 ## File Watching
 
-The app polls for changes every 5 seconds. When quiz files are added or removed:
+The app uses Server-Sent Events (SSE) for real-time updates. When quiz files are added or removed:
+- Server pushes updates instantly to all connected clients
 - Quiz list updates automatically
 - Orphaned attempt data is cleaned up
 - No page reload required
+
+The server watches the `data/` directory and notifies clients immediately when changes occur.
 
 ## Design
 
