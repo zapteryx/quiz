@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
   <style>
     * {
       margin: 0;
@@ -784,13 +786,17 @@
   </div>
 
   <script>
-    // Markdown Processor - handles inline code blocks and escapes HTML
+    // Markdown Processor - handles inline code blocks, LaTeX, and escapes HTML
     const MarkdownProcessor = {
       process(text) {
         if (!text) return '';
 
         // First, escape HTML to prevent injection and show HTML comments
         let processed = this.escapeHtml(text);
+
+        // Process LaTeX math (both inline $ and display $$)
+        // We need to do this before code blocks to avoid conflicts
+        processed = this.processLaTeX(processed);
 
         // Then process inline code blocks (single backticks)
         processed = this.processInlineCode(processed);
@@ -802,6 +808,28 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+      },
+
+      processLaTeX(text) {
+        // Process display math first ($$...$$)
+        text = text.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
+          try {
+            return katex.renderToString(latex, { displayMode: true, throwOnError: false });
+          } catch (e) {
+            return `<span style="color: var(--incorrect);">[LaTeX Error: ${latex}]</span>`;
+          }
+        });
+
+        // Then process inline math ($...$)
+        text = text.replace(/\$([^\$]+)\$/g, (match, latex) => {
+          try {
+            return katex.renderToString(latex, { displayMode: false, throwOnError: false });
+          } catch (e) {
+            return `<span style="color: var(--incorrect);">[LaTeX Error: ${latex}]</span>`;
+          }
+        });
+
+        return text;
       },
 
       processInlineCode(text) {
