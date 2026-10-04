@@ -434,6 +434,110 @@
       margin-bottom: 16px;
     }
 
+    .search-sort-container {
+      background: var(--surface);
+      padding: 16px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--border);
+      background: var(--white);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: var(--ink);
+    }
+
+    .search-box::placeholder {
+      color: var(--text-muted);
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .control-label {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .select-input {
+      padding: 8px 12px;
+      border: 2px solid var(--border);
+      background: var(--white);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .select-input:focus {
+      outline: none;
+      border-color: var(--ink);
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pagination-info {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pagination-button {
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .pagination-button:hover:not(:disabled) {
+      background: var(--ink);
+      color: var(--white);
+      border-color: var(--ink);
+    }
+
+    .pagination-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination-button.active {
+      background: var(--ink);
+      color: var(--white);
+      border-color: var(--ink);
+    }
+
     .attempts-list {
       list-style: none;
       margin-top: 16px;
@@ -582,7 +686,36 @@
     <main id="app">
       <!-- Home View -->
       <div id="home-view" class="view">
+        <div id="home-search-controls" class="search-sort-container hidden">
+          <input type="text" id="home-search" class="search-box" placeholder="Search quizzes by title, description, or module code...">
+          <div class="controls-row">
+            <span class="control-label">Module:</span>
+            <select id="home-module-filter" class="select-input">
+              <option value="">All Modules</option>
+            </select>
+            <span class="control-label">Sort by:</span>
+            <select id="home-sort" class="select-input">
+              <option value="title-asc">Title (A-Z)</option>
+              <option value="title-desc">Title (Z-A)</option>
+              <option value="module-asc">Module Code (A-Z)</option>
+              <option value="module-desc">Module Code (Z-A)</option>
+              <option value="questions-desc">Most Questions</option>
+              <option value="questions-asc">Fewest Questions</option>
+              <option value="attempts-desc">Most Attempts</option>
+              <option value="attempts-asc">Fewest Attempts</option>
+            </select>
+            <span class="control-label">Per page:</span>
+            <select id="home-per-page" class="select-input">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+        </div>
         <ul id="quiz-list" class="quiz-list"></ul>
+        <div id="home-pagination" class="pagination hidden"></div>
         <div id="empty-state" class="empty-state hidden">
           <div class="empty-state-icon">📝</div>
           <p>No quizzes available. Add quiz JSON files to the data directory.</p>
@@ -612,7 +745,33 @@
 
         <div class="settings-section">
           <h2>Quiz Data</h2>
+          <div id="settings-search-controls" class="search-sort-container hidden">
+            <input type="text" id="settings-search" class="search-box" placeholder="Search quizzes by title or module code...">
+            <div class="controls-row">
+              <span class="control-label">Module:</span>
+              <select id="settings-module-filter" class="select-input">
+                <option value="">All Modules</option>
+              </select>
+              <span class="control-label">Sort by:</span>
+              <select id="settings-sort" class="select-input">
+                <option value="title-asc">Title (A-Z)</option>
+                <option value="title-desc">Title (Z-A)</option>
+                <option value="module-asc">Module Code (A-Z)</option>
+                <option value="module-desc">Module Code (Z-A)</option>
+                <option value="attempts-desc">Most Attempts</option>
+                <option value="attempts-asc">Fewest Attempts</option>
+              </select>
+              <span class="control-label">Per page:</span>
+              <select id="settings-per-page" class="select-input">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+          </div>
           <div id="quiz-data-list"></div>
+          <div id="settings-pagination" class="pagination hidden"></div>
         </div>
       </div>
 
@@ -1222,6 +1381,168 @@
 
     // UI Manager
     const UI = {
+      // State for home view
+      homeState: {
+        searchQuery: '',
+        moduleFilter: '',
+        sortBy: 'title-asc',
+        currentPage: 1,
+        perPage: 10
+      },
+      // State for settings view
+      settingsState: {
+        searchQuery: '',
+        moduleFilter: '',
+        sortBy: 'title-asc',
+        currentPage: 1,
+        perPage: 10
+      },
+
+      extractModuleCode(title) {
+        // Extract the first word from the title as module code
+        const match = title.match(/^([A-Z]{2,4}\d{4})/i);
+        return match ? match[1].toUpperCase() : null;
+      },
+
+      getUniqueModules(quizzes) {
+        const modules = new Set();
+        Object.values(quizzes).forEach(quiz => {
+          const module = this.extractModuleCode(quiz.title);
+          if (module) modules.add(module);
+        });
+        return Array.from(modules).sort();
+      },
+
+      filterAndSortQuizzes(quizzes, state) {
+        const quizIds = Object.keys(quizzes);
+        let filtered = quizIds.map(id => ({
+          id,
+          quiz: quizzes[id],
+          moduleCode: this.extractModuleCode(quizzes[id].title),
+          attempts: Storage.getAttempts(id)
+        }));
+
+        // Apply search filter
+        if (state.searchQuery) {
+          const query = state.searchQuery.toLowerCase();
+          filtered = filtered.filter(item => {
+            const title = item.quiz.title.toLowerCase();
+            const description = (item.quiz.description || '').toLowerCase();
+            const moduleCode = (item.moduleCode || '').toLowerCase();
+            return title.includes(query) || description.includes(query) || moduleCode.includes(query);
+          });
+        }
+
+        // Apply module filter
+        if (state.moduleFilter) {
+          filtered = filtered.filter(item => item.moduleCode === state.moduleFilter);
+        }
+
+        // Apply sorting
+        filtered.sort((a, b) => {
+          switch (state.sortBy) {
+            case 'title-asc':
+              return a.quiz.title.localeCompare(b.quiz.title);
+            case 'title-desc':
+              return b.quiz.title.localeCompare(a.quiz.title);
+            case 'module-asc':
+              return (a.moduleCode || '').localeCompare(b.moduleCode || '');
+            case 'module-desc':
+              return (b.moduleCode || '').localeCompare(a.moduleCode || '');
+            case 'questions-asc':
+              return a.quiz.questions.length - b.quiz.questions.length;
+            case 'questions-desc':
+              return b.quiz.questions.length - a.quiz.questions.length;
+            case 'attempts-asc':
+              return a.attempts.length - b.attempts.length;
+            case 'attempts-desc':
+              return b.attempts.length - a.attempts.length;
+            default:
+              return 0;
+          }
+        });
+
+        return filtered;
+      },
+
+      paginateResults(items, page, perPage) {
+        if (perPage === 'all') {
+          return {
+            items,
+            totalPages: 1,
+            currentPage: 1,
+            totalItems: items.length,
+            startIndex: 0,
+            endIndex: items.length
+          };
+        }
+
+        const perPageNum = parseInt(perPage);
+        const totalPages = Math.ceil(items.length / perPageNum);
+        const currentPage = Math.min(page, Math.max(1, totalPages));
+        const startIndex = (currentPage - 1) * perPageNum;
+        const endIndex = Math.min(startIndex + perPageNum, items.length);
+        const paginatedItems = items.slice(startIndex, endIndex);
+
+        return {
+          items: paginatedItems,
+          totalPages,
+          currentPage,
+          totalItems: items.length,
+          startIndex,
+          endIndex
+        };
+      },
+
+      renderPagination(containerId, pagination, onPageChange) {
+        const container = document.getElementById(containerId);
+        if (pagination.totalPages <= 1) {
+          container.classList.add('hidden');
+          return;
+        }
+
+        container.classList.remove('hidden');
+
+        const { currentPage, totalPages, startIndex, endIndex, totalItems } = pagination;
+
+        let html = `
+          <div class="pagination-info">
+            Showing ${startIndex + 1}-${endIndex} of ${totalItems}
+          </div>
+          <div class="pagination-controls">
+            <button class="pagination-button" ${currentPage === 1 ? 'disabled' : ''}
+                    onclick="${onPageChange}(1)">First</button>
+            <button class="pagination-button" ${currentPage === 1 ? 'disabled' : ''}
+                    onclick="${onPageChange}(${currentPage - 1})">Previous</button>
+        `;
+
+        // Page numbers
+        const maxButtons = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+        if (endPage - startPage < maxButtons - 1) {
+          startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          html += `
+            <button class="pagination-button ${i === currentPage ? 'active' : ''}"
+                    onclick="${onPageChange}(${i})">${i}</button>
+          `;
+        }
+
+        html += `
+            <button class="pagination-button" ${currentPage === totalPages ? 'disabled' : ''}
+                    onclick="${onPageChange}(${currentPage + 1})">Next</button>
+            <button class="pagination-button" ${currentPage === totalPages ? 'disabled' : ''}
+                    onclick="${onPageChange}(${totalPages})">Last</button>
+          </div>
+        `;
+
+        container.innerHTML = html;
+      },
+
       async init() {
         this.applyTheme();
         await QuizManager.loadQuizzes();
@@ -1229,6 +1550,8 @@
         this.setupNavigation();
         this.setupFileWatcher();
         this.setupBeforeUnload();
+        this.setupHomeControls();
+        this.setupSettingsControls();
       },
 
       setupBeforeUnload() {
@@ -1261,6 +1584,68 @@
         const newTheme = current === 'light' ? 'dark' : 'light';
         Storage.saveTheme(newTheme);
         this.applyTheme();
+      },
+
+      setupHomeControls() {
+        const searchInput = document.getElementById('home-search');
+        const moduleFilter = document.getElementById('home-module-filter');
+        const sortSelect = document.getElementById('home-sort');
+        const perPageSelect = document.getElementById('home-per-page');
+
+        searchInput.addEventListener('input', (e) => {
+          this.homeState.searchQuery = e.target.value;
+          this.homeState.currentPage = 1;
+          this.renderHome();
+        });
+
+        moduleFilter.addEventListener('change', (e) => {
+          this.homeState.moduleFilter = e.target.value;
+          this.homeState.currentPage = 1;
+          this.renderHome();
+        });
+
+        sortSelect.addEventListener('change', (e) => {
+          this.homeState.sortBy = e.target.value;
+          this.homeState.currentPage = 1;
+          this.renderHome();
+        });
+
+        perPageSelect.addEventListener('change', (e) => {
+          this.homeState.perPage = e.target.value;
+          this.homeState.currentPage = 1;
+          this.renderHome();
+        });
+      },
+
+      setupSettingsControls() {
+        const searchInput = document.getElementById('settings-search');
+        const moduleFilter = document.getElementById('settings-module-filter');
+        const sortSelect = document.getElementById('settings-sort');
+        const perPageSelect = document.getElementById('settings-per-page');
+
+        searchInput.addEventListener('input', (e) => {
+          this.settingsState.searchQuery = e.target.value;
+          this.settingsState.currentPage = 1;
+          this.renderSettings();
+        });
+
+        moduleFilter.addEventListener('change', (e) => {
+          this.settingsState.moduleFilter = e.target.value;
+          this.settingsState.currentPage = 1;
+          this.renderSettings();
+        });
+
+        sortSelect.addEventListener('change', (e) => {
+          this.settingsState.sortBy = e.target.value;
+          this.settingsState.currentPage = 1;
+          this.renderSettings();
+        });
+
+        perPageSelect.addEventListener('change', (e) => {
+          this.settingsState.perPage = e.target.value;
+          this.settingsState.currentPage = 1;
+          this.renderSettings();
+        });
       },
 
       setupNavigation() {
@@ -1307,19 +1692,48 @@
       renderHome() {
         const quizList = document.getElementById('quiz-list');
         const emptyState = document.getElementById('empty-state');
+        const searchControls = document.getElementById('home-search-controls');
         const quizzes = QuizManager.quizzes;
         const quizIds = Object.keys(quizzes);
 
         if (quizIds.length === 0) {
           quizList.innerHTML = '';
           emptyState.classList.remove('hidden');
+          searchControls.classList.add('hidden');
+          document.getElementById('home-pagination').classList.add('hidden');
           return;
         }
 
         emptyState.classList.add('hidden');
-        quizList.innerHTML = quizIds.map(quizId => {
-          const quiz = quizzes[quizId];
-          const attempts = Storage.getAttempts(quizId);
+        searchControls.classList.remove('hidden');
+
+        // Update module filter dropdown
+        const modules = this.getUniqueModules(quizzes);
+        const moduleFilter = document.getElementById('home-module-filter');
+        const currentModuleValue = this.homeState.moduleFilter;
+        moduleFilter.innerHTML = '<option value="">All Modules</option>' +
+          modules.map(m => `<option value="${m}" ${m === currentModuleValue ? 'selected' : ''}>${m}</option>`).join('');
+
+        // Restore control values
+        document.getElementById('home-search').value = this.homeState.searchQuery;
+        document.getElementById('home-sort').value = this.homeState.sortBy;
+        document.getElementById('home-per-page').value = this.homeState.perPage;
+
+        // Filter and sort
+        const filtered = this.filterAndSortQuizzes(quizzes, this.homeState);
+
+        if (filtered.length === 0) {
+          quizList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No quizzes match your search.</p></div>';
+          document.getElementById('home-pagination').classList.add('hidden');
+          return;
+        }
+
+        // Paginate
+        const pagination = this.paginateResults(filtered, this.homeState.currentPage, this.homeState.perPage);
+
+        // Render quiz list
+        quizList.innerHTML = pagination.items.map(item => {
+          const { id: quizId, quiz, attempts } = item;
           const lastAttempt = attempts[attempts.length - 1];
           const savedState = Storage.getSavedState();
           const hasInProgress = savedState && savedState.quizId === quizId;
@@ -1348,21 +1762,60 @@
             </li>
           `;
         }).join('');
+
+        // Render pagination
+        this.renderPagination('home-pagination', pagination, 'UI.goToHomePage');
+      },
+
+      goToHomePage(page) {
+        this.homeState.currentPage = page;
+        this.renderHome();
+        // Scroll to top of quiz list
+        document.getElementById('home-view').scrollIntoView({ behavior: 'smooth' });
       },
 
       renderSettings() {
         const quizDataList = document.getElementById('quiz-data-list');
+        const searchControls = document.getElementById('settings-search-controls');
         const quizzes = QuizManager.quizzes;
         const quizIds = Object.keys(quizzes);
 
         if (quizIds.length === 0) {
           quizDataList.innerHTML = '<p style="color: var(--text-muted);">No quiz data available.</p>';
+          searchControls.classList.add('hidden');
+          document.getElementById('settings-pagination').classList.add('hidden');
           return;
         }
 
-        quizDataList.innerHTML = quizIds.map(quizId => {
-          const quiz = quizzes[quizId];
-          const attempts = Storage.getAttempts(quizId);
+        searchControls.classList.remove('hidden');
+
+        // Update module filter dropdown
+        const modules = this.getUniqueModules(quizzes);
+        const moduleFilter = document.getElementById('settings-module-filter');
+        const currentModuleValue = this.settingsState.moduleFilter;
+        moduleFilter.innerHTML = '<option value="">All Modules</option>' +
+          modules.map(m => `<option value="${m}" ${m === currentModuleValue ? 'selected' : ''}>${m}</option>`).join('');
+
+        // Restore control values
+        document.getElementById('settings-search').value = this.settingsState.searchQuery;
+        document.getElementById('settings-sort').value = this.settingsState.sortBy;
+        document.getElementById('settings-per-page').value = this.settingsState.perPage;
+
+        // Filter and sort
+        const filtered = this.filterAndSortQuizzes(quizzes, this.settingsState);
+
+        if (filtered.length === 0) {
+          quizDataList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No quizzes match your search.</p></div>';
+          document.getElementById('settings-pagination').classList.add('hidden');
+          return;
+        }
+
+        // Paginate
+        const pagination = this.paginateResults(filtered, this.settingsState.currentPage, this.settingsState.perPage);
+
+        // Render quiz list
+        quizDataList.innerHTML = pagination.items.map(item => {
+          const { id: quizId, quiz, attempts } = item;
 
           return `
             <div class="settings-item" style="cursor: pointer; transition: background 0.2s;" onclick="UI.showQuizDetail('${quizId}')">
@@ -1376,6 +1829,16 @@
             </div>
           `;
         }).join('');
+
+        // Render pagination
+        this.renderPagination('settings-pagination', pagination, 'UI.goToSettingsPage');
+      },
+
+      goToSettingsPage(page) {
+        this.settingsState.currentPage = page;
+        this.renderSettings();
+        // Scroll to top of quiz data list
+        document.getElementById('settings-view').scrollIntoView({ behavior: 'smooth' });
       },
 
       showQuizDetail(quizId) {
