@@ -784,6 +784,33 @@
   </div>
 
   <script>
+    // Markdown Processor - handles inline code blocks and escapes HTML
+    const MarkdownProcessor = {
+      process(text) {
+        if (!text) return '';
+
+        // First, escape HTML to prevent injection and show HTML comments
+        let processed = this.escapeHtml(text);
+
+        // Then process inline code blocks (single backticks)
+        processed = this.processInlineCode(processed);
+
+        return processed;
+      },
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      },
+
+      processInlineCode(text) {
+        // Match single backticks (but not double backticks which might be used for other purposes)
+        // This regex finds text between single backticks
+        return text.replace(/`([^`]+)`/g, '<code style="background: var(--surface); padding: 2px 6px; border-radius: 3px; font-family: \'Courier New\', monospace; font-size: 0.9em; color: var(--ink);">$1</code>');
+      }
+    };
+
     // Storage Manager
     const Storage = {
       STORAGE_KEY: 'quiz_platform_data',
@@ -1149,7 +1176,7 @@
 
         let html = `
           <div class="question-counter">Question ${currentIndex + 1} of ${questions.length}</div>
-          <div class="question-text">${question.question}</div>
+          <div class="question-text">${MarkdownProcessor.process(question.question)}</div>
           <div class="question-score">${question.score} ${question.score === 1 ? 'point' : 'points'}</div>
           <ul class="options">
             ${question.options.map(option => {
@@ -1175,7 +1202,7 @@
                            value="${option.id}"
                            ${isSelected ? 'checked' : ''}
                            ${this.currentState.showingFeedback ? 'disabled' : ''}>
-                    ${option.text}
+                    ${MarkdownProcessor.process(option.text)}
                   </label>
                 </li>
               `;
@@ -1189,7 +1216,7 @@
           html += `
             <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
               <div class="feedback-label">${isCorrect ? 'Correct' : 'Incorrect'}</div>
-              <div>${isCorrect ? question.feedback.correct : question.feedback.incorrect}</div>
+              <div>${MarkdownProcessor.process(isCorrect ? question.feedback.correct : question.feedback.incorrect)}</div>
             </div>
           `;
         }
@@ -1355,12 +1382,12 @@
             html += `
               <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}" style="margin-bottom: 24px;">
                 <div style="font-weight: 600; margin-bottom: 8px;">
-                  Question ${index + 1}: ${question.question}
+                  Question ${index + 1}: ${MarkdownProcessor.process(question.question)}
                 </div>
                 <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 8px;">
                   Score: ${score.toFixed(2)} / ${question.score}
                 </div>
-                <div>${isCorrect ? question.feedback.correct : question.feedback.incorrect}</div>
+                <div>${MarkdownProcessor.process(isCorrect ? question.feedback.correct : question.feedback.incorrect)}</div>
               </div>
             `;
           });
@@ -1969,12 +1996,12 @@
 
                           return `
                             <div class="attempt-question">
-                              <div class="attempt-question-title">Q${idx + 1}: ${q.question}</div>
+                              <div class="attempt-question-title">Q${idx + 1}: ${MarkdownProcessor.process(q.question)}</div>
                               <div class="attempt-answer ${isCorrect ? 'correct' : 'incorrect'}">
-                                Your answer: ${userAnswerText}
+                                Your answer: ${MarkdownProcessor.process(userAnswerText)}
                               </div>
                               <div class="attempt-answer correct">
-                                Correct answer: ${correctAnswerText}
+                                Correct answer: ${MarkdownProcessor.process(correctAnswerText)}
                               </div>
                               <div style="color: var(--text-muted);">
                                 Score: ${q.score.toFixed(2)} / ${q.maxScore}
