@@ -905,26 +905,29 @@
 
       async loadQuizzes() {
         try {
-          const response = await fetch('/api/quizzes');
-          const quizFiles = await response.json();
+          const response = await fetch('/api/quizzes-metadata');
+          const metadataList = await response.json();
 
           const loadedQuizzes = {};
-          for (const file of quizFiles) {
-            try {
-              const quizResponse = await fetch(`/data/${file}`);
-              const quiz = await quizResponse.json();
-              const quizId = file.replace('.json', '');
-              loadedQuizzes[quizId] = quiz;
-            } catch (error) {
-              console.error(`Failed to load quiz ${file}:`, error);
-            }
+          for (const item of metadataList) {
+            // Normalise quiz structure to support both full loading and lazy-loaded questions
+            loadedQuizzes[item.id] = {
+              id: item.id,
+              filename: item.filename,
+              title: item.title,
+              description: item.description,
+              settings: item.settings || {},
+              questionCount: item.questionCount,
+              // Map questions array if present, or stub it with length equal to questionCount
+              questions: item.questions || { length: item.questionCount }
+            };
           }
 
           this.quizzes = loadedQuizzes;
           Storage.cleanupDeletedQuizzes(Object.keys(this.quizzes));
           return this.quizzes;
         } catch (error) {
-          console.error('Failed to load quizzes:', error);
+          console.error('Failed to load quizzes metadata:', error);
           return {};
         }
       },
@@ -1036,12 +1039,26 @@
         }
       },
 
-      initializeQuiz(quizId, customQuestionCount = null) {
+      async initializeQuiz(quizId, customQuestionCount = null) {
         document.querySelector('.modal')?.remove();
         Storage.clearSavedState();
 
-        const quiz = this.quizzes[quizId];
+        let quiz = this.quizzes[quizId];
         if (!quiz) return;
+
+        // Fetch full quiz questions if not yet loaded
+        if (!Array.isArray(quiz.questions)) {
+          try {
+            const quizResponse = await fetch(`/data/${quiz.filename || (quizId + '.json')}`);
+            const fullQuizData = await quizResponse.json();
+            // Merge full questions into cached quiz object
+            quiz.questions = fullQuizData.questions;
+          } catch (error) {
+            console.error(`Failed to load full quiz data for ${quizId}:`, error);
+            alert('Failed to load quiz questions. Please try again.');
+            return;
+          }
+        }
 
         // Check if we need to prompt for question count
         if (customQuestionCount === null && quiz.settings.promptForQuestionCount) {

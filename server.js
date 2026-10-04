@@ -28,6 +28,47 @@ app.get('/api/quizzes', async (req, res) => {
   }
 });
 
+// API endpoint to get quiz metadata without questions
+app.get('/api/quizzes-metadata', async (req, res) => {
+  try {
+    const files = await fs.readdir(DATA_DIR);
+    const jsonFiles = files.filter(file => file.endsWith('.json'));
+
+    const quizMetadata = await Promise.all(
+      jsonFiles.map(async (filename) => {
+        try {
+          const filePath = path.join(DATA_DIR, filename);
+          const data = await fs.readFile(filePath, 'utf8');
+          const quiz = JSON.parse(data);
+
+          // Extract only metadata, excluding questions
+          return {
+            filename: filename,
+            id: filename.replace('.json', ''),
+            title: quiz.title || 'Untitled Quiz',
+            description: quiz.description || '',
+            settings: quiz.settings || {},
+            questionCount: quiz.questions ? quiz.questions.length : 0
+          };
+        } catch (error) {
+          console.error(`Error reading ${filename}:`, error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out any failed reads
+    const validMetadata = quizMetadata.filter(meta => meta !== null);
+    res.json(validMetadata);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.json([]);
+    } else {
+      res.status(500).json({ error: 'Failed to read quiz directory' });
+    }
+  }
+});
+
 // Server-Sent Events endpoint for real-time updates
 app.get('/api/events', (req, res) => {
   // Set SSE headers
