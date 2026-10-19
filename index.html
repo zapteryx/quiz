@@ -791,15 +791,48 @@
       process(text) {
         if (!text) return '';
 
-        // First, escape HTML to prevent injection and show HTML comments
-        let processed = this.escapeHtml(text);
+        // Extract LaTeX expressions before HTML escaping to preserve special characters
+        const latexPlaceholders = [];
+        let processed = text;
 
-        // Process LaTeX math (both inline $ and display $$)
-        // We need to do this before code blocks to avoid conflicts
-        processed = this.processLaTeX(processed);
+        // Extract display math first ($$...$$)
+        processed = processed.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
+          const placeholder = `___LATEX_DISPLAY_${latexPlaceholders.length}___`;
+          latexPlaceholders.push({ latex, displayMode: true });
+          return placeholder;
+        });
 
-        // Then process inline code blocks (single backticks)
+        // Extract inline math ($...$)
+        processed = processed.replace(/\$([^\$]+)\$/g, (match, latex) => {
+          const placeholder = `___LATEX_INLINE_${latexPlaceholders.length}___`;
+          latexPlaceholders.push({ latex, displayMode: false });
+          return placeholder;
+        });
+
+        // Now escape HTML in the non-LaTeX text
+        processed = this.escapeHtml(processed);
+
+        // Process inline code blocks (single backticks)
         processed = this.processInlineCode(processed);
+
+        // Render and insert LaTeX back
+        latexPlaceholders.forEach((item, index) => {
+          const displayPlaceholder = `___LATEX_DISPLAY_${index}___`;
+          const inlinePlaceholder = `___LATEX_INLINE_${index}___`;
+          const placeholder = item.displayMode ? displayPlaceholder : inlinePlaceholder;
+
+          try {
+            const rendered = katex.renderToString(item.latex, {
+              displayMode: item.displayMode,
+              throwOnError: false
+            });
+            processed = processed.replace(placeholder, rendered);
+          } catch (e) {
+            processed = processed.replace(placeholder,
+              `<span style="color: var(--incorrect);">[LaTeX Error: ${this.escapeHtml(item.latex)}]</span>`
+            );
+          }
+        });
 
         return processed;
       },
@@ -808,28 +841,6 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-      },
-
-      processLaTeX(text) {
-        // Process display math first ($$...$$)
-        text = text.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
-          try {
-            return katex.renderToString(latex, { displayMode: true, throwOnError: false });
-          } catch (e) {
-            return `<span style="color: var(--incorrect);">[LaTeX Error: ${latex}]</span>`;
-          }
-        });
-
-        // Then process inline math ($...$)
-        text = text.replace(/\$([^\$]+)\$/g, (match, latex) => {
-          try {
-            return katex.renderToString(latex, { displayMode: false, throwOnError: false });
-          } catch (e) {
-            return `<span style="color: var(--incorrect);">[LaTeX Error: ${latex}]</span>`;
-          }
-        });
-
-        return text;
       },
 
       processInlineCode(text) {
